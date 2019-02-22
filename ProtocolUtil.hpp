@@ -7,9 +7,104 @@
 #include <arpa/inet.h>
 #include <string>
 #include <unistd.h>
+#include <sstream>
 #include "Log.hpp"
+#include "json/json.h"
 
 const int BACKLOG = 5;
+
+class Request
+{
+public:
+    std::string method_;    //Register, Login, Logout
+    std::string content_lenth_; //"Conten-Length: 89"
+    std::string blank_;
+    std::string text_;
+
+    Request():blank_("\n") {}
+};
+
+class Util
+{
+public:
+    static bool RegisterEnter(std::string& name, std::string &passwd)
+    {
+
+        std::cout << "Please Enter Nick Name: ";
+        std::cin >> name;
+        std::cout << "Please Enter Passwd: ";
+        std::cin >> passwd;
+        std::string AckPasswd;
+        std::cout << "Please Enter Passwd Again: ";
+        std::cin >> AckPasswd;
+
+        if(passwd == AckPasswd)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    static  void Seralizer(Json::Value& root, std::string &outString)
+    {
+        Json::StreamWriterBuilder wBuilder;
+        std::unique_ptr<Json::StreamWriter> writer(wBuilder.newStreamWriter());
+
+        std::ostringstream os;        
+        writer->write(root, &os);
+
+        outString = os.str();
+    }
+    
+    static bool UnSeralizer(std::string &inString, Json::Value &root)
+    {
+        Json::CharReaderBuilder rBuilder;
+        std::unique_ptr<Json::CharReader> reader(rBuilder.newCharReader());
+        int size = inString.size();
+        JSONCPP_STRING errs;
+        if(!reader->parse(inString.c_str(), inString.c_str() + size, &root, &errs))
+        {
+            return false;
+        }
+        return true;
+    }
+
+    static std::string IntToString(int x)
+    {
+        std::stringstream ss;
+        ss << x;
+        return ss.str();
+    }
+
+    static void RecvOneLine(int sock, std::string &outString)
+    {
+        char c = 'x';
+        while(1)
+        {
+            ssize_t s = recv(sock, &c, 1 , 0);
+            if(s > 0)
+            {
+                if(c == '\n')break;
+                outString.push_back(c);
+            }
+            else
+            {
+                break;
+            }
+        }
+    }
+    
+    static void RecvRequest(int sock, Request &rq)
+    {
+        RecvOneLine(sock, rq.method_);
+        RecvOneLine(sock, rq.content_lenth_);
+        RecvOneLine(sock, rq.blank_);
+        std::string &cl = rq.content_lenth_;
+        RecvOneLine(sock, rq.text_);
+    }
+};
+
 
 class SocketApi
 {
@@ -90,6 +185,14 @@ public:
             return false;
         }
         return true;
+    }
+
+    static void Send(int sock, Request &rq)
+    {
+        send(sock, rq.method_.c_str(), rq.method_.size(), 0);
+        send(sock, rq.content_lenth_.c_str(), rq.content_lenth_.size(), 0);
+        send(sock, rq.blank_.c_str(), rq.blank_.size(), 0);
+        send(sock, rq.text_.c_str(), rq.text_.size(), 0);
     }
 };
 

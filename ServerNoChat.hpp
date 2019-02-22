@@ -1,6 +1,7 @@
 #ifndef _SERVER_NOCHAT_HPP_
 #define _SERVER_NOCHAT_HPP_
 
+#include "UserManager.hpp"
 #include "ProtocolUtil.hpp"
 #include <pthread.h>
 #include <thread>
@@ -64,6 +65,7 @@ private:
     int udp_work_sock_;
     int udp_port_;
     
+    UserManager um;
 };
 
 void* HandlerRequest(void *arg)
@@ -71,7 +73,30 @@ void* HandlerRequest(void *arg)
     parm* pparm = (parm*)arg;
     ServerNoChat *sp = pparm->sp_;
     int sock = pparm->sock_;
+    delete pparm;
     pthread_detach(pthread_self());
+
+    Request rq;
+    Util::RecvRequest(sock, rq);
+
+    if(rq.method_ == "REGISTER")
+    {
+        Json::Value root;
+        Util::UnSeralizer(rq.text_, root);
+
+        std::string name = root["name"].asString();
+        std::string passwd = root["passwd"].asString();
+
+        
+    }
+    else if(rq.method_ == "LOGIN")
+    {
+
+    }
+    else
+    {
+
+    }
 
     //recv
     //anys
