@@ -3,6 +3,7 @@
 
 #include "UserManager.hpp"
 #include "ProtocolUtil.hpp"
+#include "DataPool.hpp"
 #include <pthread.h>
 #include <thread>
 
@@ -14,7 +15,14 @@ class parm
 public:
     ServerNoChat *sp_;
     int sock_;
-    parm(ServerNoChat *sp, int sock):sp_(sp), sock_(sock) {}
+    std::string ip_;
+    int port_;
+    parm(ServerNoChat *sp, int sock, const std::string &ip,const int port ):
+        sp_(sp), 
+        sock_(sock),
+        ip_(ip),
+        port_(port)
+    {}
 };
 
 class ServerNoChat
@@ -39,6 +47,21 @@ public:
 
     }
 
+    unsigned int RegisterUser(const std::string& name, const std::string& passwd)
+    {
+        return um.Insert(name, passwd);
+    }
+
+    unsigned int LoginUser(const unsigned int & id, const std::string & passwd, const std::string &ip, const int port)
+    {   
+        int result =  um.Check(id, passwd);
+        if(result >= ID_TRESHOLD)
+        {
+            //um.MoveToOnLine(id, ip, port);
+        }
+        return result;
+    }
+
     void Start()
     {
         std::string ip;
@@ -46,7 +69,7 @@ public:
         for(;;)
         {
             int sock = SocketApi::Accept(tcp_listen_sock_, ip, port);
-            parm tmp(this, sock);
+            parm tmp(this, sock, ip, port);
             if(sock > 0)
             {
                 std::cout << "new client: " << ip << "-" << port << std::endl;
@@ -55,6 +78,13 @@ public:
             }
             
         }
+    }
+
+    void Producter()
+    {
+        std::string recvStr;
+        Util::RecvMessage(udp_work_sock_, recvStr);
+        //todo 
     }
 
     friend void* HandlerRequest(void *);
@@ -66,6 +96,7 @@ private:
     int udp_port_;
     
     UserManager um;
+    DataPool dp;
 };
 
 void* HandlerRequest(void *arg)
@@ -73,29 +104,34 @@ void* HandlerRequest(void *arg)
     parm* pparm = (parm*)arg;
     ServerNoChat *sp = pparm->sp_;
     int sock = pparm->sock_;
-    delete pparm;
     pthread_detach(pthread_self());
 
     Request rq;
     Util::RecvRequest(sock, rq);
-
+    
+    Json::Value root;
+    Util::UnSeralizer(rq.text_, root);
+    LOG(rq.text_, NORMAL);
     if(rq.method_ == "REGISTER")
     {
-        Json::Value root;
-        Util::UnSeralizer(rq.text_, root);
-
         std::string name = root["name"].asString();
         std::string passwd = root["passwd"].asString();
-
-        
+        unsigned int id = sp->RegisterUser(name, passwd);
+        send(sock, &id, sizeof(id), 0);
     }
     else if(rq.method_ == "LOGIN")
     {
+        unsigned int id = root["id"].asInt();
+        std::string passwd = root["passwd"].asString();
 
+        //check, move user to online
+        unsigned int result = sp->LoginUser(id, passwd, pparm->ip_, pparm->port_);
+
+        send(sock, &result, sizeof(result), 0);
     }
     else
     {
-
+        
     }
 
     //recv

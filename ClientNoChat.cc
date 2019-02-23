@@ -12,8 +12,7 @@ static void Menu(int& select)
     cout << "****1.Regisiter           2.Login*******\n";
     cout << "****                      3.Exit *******\n";
     cout << "****************************************\n";
-    cout << "****                  Please Select*****\n";
-    cout << "****************************************\n";
+    cout << "Please Select >";
     cin >> select;
 }
 
@@ -26,9 +25,9 @@ int main(int argc, char **argv)
     ClientNoChat *cp = new ClientNoChat(argv[1]); 
     cp->InitClient();
     int select = 0;
-    Menu(select);
     for(;;)
     {
+        Menu(select);
         switch(select)
         {
         case 1:

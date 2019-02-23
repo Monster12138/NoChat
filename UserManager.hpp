@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <vector>
 #include <arpa/inet.h>
+#include <mutex>
 
 class User
 {
@@ -22,11 +23,44 @@ class UserManager
 {
 public:
     unsigned int assign_id;
+    std::mutex lock_;
     typedef std::unordered_map<unsigned int, User> UserMap;
     typedef std::unordered_map<unsigned int, struct sockaddr_in> OnlineUser;
-    UserManager() {}
+    UserManager():assign_id(60000) {}
     ~UserManager() {}
+    
+    unsigned int Insert(const std::string &name, const std::string &passwd)
+    {
+        lock_.lock();
+        unsigned int id = assign_id++;
+        User newuser(name, id, passwd);
+        if(users.find(id) == users.end())
+        {
+            users.insert(std::make_pair(id, newuser));
+            lock_.unlock();
+            return id;
+        }
 
+        lock_.unlock();
+        return 1;
+    }
+
+    unsigned int Check(const unsigned int & id, const std::string & passwd)
+    {
+        lock_.lock();
+        auto it = users.find(id);
+        if(it != users.end())
+        {
+            if(it->second.passwd_  == passwd)
+            {
+                lock_.unlock();
+                return id;
+            }
+        }
+
+        lock_.unlock();
+        return 2;
+    }
 private:
     UserMap users;
     OnlineUser onlineUsers;
