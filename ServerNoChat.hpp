@@ -4,6 +4,7 @@
 #include "UserManager.hpp"
 #include "ProtocolUtil.hpp"
 #include "DataPool.hpp"
+#include "Message.hpp"
 #include <pthread.h>
 #include <thread>
 
@@ -37,10 +38,14 @@ public:
 
     void InitServer()
     {
+        int opt;
+
         tcp_listen_sock_ = SocketApi::TcpSocket();
+        setsockopt(tcp_listen_sock_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
         SocketApi::Bind(tcp_listen_sock_, tcp_port_);
 
         udp_work_sock_ = SocketApi::UdpSocket();
+        setsockopt(udp_work_sock_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
         SocketApi::Bind(udp_work_sock_, udp_port_);
 
         SocketApi::Listen(tcp_listen_sock_);
@@ -52,14 +57,9 @@ public:
         return um.Insert(name, passwd);
     }
 
-    unsigned int LoginUser(const unsigned int & id, const std::string & passwd, const std::string &ip, const int port)
+    unsigned int LoginUser(const unsigned int & id, const std::string & passwd)
     {   
-        int result =  um.Check(id, passwd);
-        if(result >= ID_TRESHOLD)
-        {
-            //um.MoveToOnLine(id, ip, port);
-        }
-        return result;
+        return  um.Check(id, passwd);
     }
 
     void Start()
@@ -83,8 +83,29 @@ public:
     void Producter()
     {
         std::string recvStr;
-        Util::RecvMessage(udp_work_sock_, recvStr);
-        //todo 
+        struct sockaddr_in clientAddr;
+        Util::RecvMessage(udp_work_sock_, recvStr, clientAddr);
+        if(!recvStr.empty())
+        {
+            dp.PutMessage(recvStr);        
+            Message m;
+            m.ToRecvValue(recvStr);
+            std::cout << "recv Msg: " << recvStr << std::endl;
+            um.AddOnlineUser(m.id_, clientAddr);
+        }
+    }
+
+    void Consumer()
+    {
+        std::string msg;
+        dp.GetMessage(msg);
+
+        auto online = um.GetOnlineUsers();
+        for(auto it = online.begin(); it != online.end(); ++it)
+        {
+            Util::SendMessage(udp_work_sock_, msg, it->second);
+            std::cout << "send Msg: " << msg << std::endl;
+        }
     }
 
     friend void* HandlerRequest(void *);
@@ -125,7 +146,7 @@ void* HandlerRequest(void *arg)
         std::string passwd = root["passwd"].asString();
 
         //check, move user to online
-        unsigned int result = sp->LoginUser(id, passwd, pparm->ip_, pparm->port_);
+        unsigned int result = sp->LoginUser(id, passwd);
 
         send(sock, &result, sizeof(result), 0);
     }

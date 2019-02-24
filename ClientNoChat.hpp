@@ -2,6 +2,7 @@
 #define _CLIENT_NOCHAT_HPP_
 
 #include "ProtocolUtil.hpp"
+#include "Message.hpp"
 #include <iostream>
 #include <string>
 
@@ -15,7 +16,11 @@ public:
         tcp_sock_(-1), 
         udp_sock_(-1), 
         id_(0)
-    {}
+    {
+        server.sin_family = AF_INET;
+        server.sin_port = htons(UDP_PORT);
+        server.sin_addr.s_addr = inet_addr(peer_ip_.c_str());
+    }
 
     void InitClient()
     {
@@ -110,7 +115,26 @@ public:
 
     void Chat()
     {
+        std::string name;
+        std::cout << "Please Enter Your Name: ";
+        std::cin >> name;
 
+        for(;;)
+        {
+            std::string text;
+            std::cout << "Please say: ";
+            std::cin >> text;
+            Message msg(nick_name_, id_, text);
+
+            std::string sendStr;
+            msg.ToSendString(sendStr);
+            Util::SendMessage(udp_sock_, sendStr, server);
+
+            std::string recvStr;
+            Util::RecvMessage(udp_sock_, recvStr, server);
+            msg.ToRecvValue(recvStr);
+            std::cout << msg.nick_name_ << ":" << msg.text_ << std::endl;
+        }
     }
 private:
     std::string peer_ip_;
@@ -120,6 +144,8 @@ private:
     unsigned int id_;
     std::string passwd_;
     std::string nick_name_;
+
+    struct sockaddr_in server;
 };
 
 #endif

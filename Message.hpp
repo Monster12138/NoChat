@@ -8,6 +8,8 @@
 class Message
 {
 public:
+    Message() {}
+
     Message(const std::string &name, unsigned int id, const std::string &text) :
         nick_name_(name),
         id_(id),
@@ -38,7 +40,5 @@ public:
     std::string nick_name_;
     unsigned int id_;
     std::string text_;
-private:
-
 };
 

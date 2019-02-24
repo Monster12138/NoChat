@@ -61,6 +61,27 @@ public:
         lock_.unlock();
         return 2;
     }
+
+    void AddOnlineUser(const unsigned int id, struct sockaddr_in & clientAddr)
+    {
+        lock_.lock ();
+        auto it = onlineUsers.find(id);
+        if(it == onlineUsers.end())
+        {
+            onlineUsers.insert({id, clientAddr});
+        }
+
+        lock_.unlock();
+    }
+
+    OnlineUser GetOnlineUsers()
+    {
+        lock_.lock();
+        auto online = onlineUsers;
+        lock_.unlock();
+        return online;
+    }
+
 private:
     UserMap users;
     OnlineUser onlineUsers;

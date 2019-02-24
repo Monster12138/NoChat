@@ -146,6 +146,26 @@ public:
         
     }
 
+    static void RecvMessage(int sock, std::string& recvStr, struct sockaddr_in& clientAddr)
+    {
+        socklen_t len = sizeof(clientAddr);
+        char msg[1024] = {0};
+        ssize_t s = recvfrom(sock, msg, sizeof(msg) - 1, 0, (struct sockaddr *)&clientAddr, &len);
+        if(s <= 0)
+        {
+            LOG("recvfrom message error", WARING);
+        }
+        else
+        {
+            recvStr = msg;
+        }
+    }
+
+    static void SendMessage(int sock, const std::string& sendStr, const struct sockaddr_in& clientAddr )
+    {
+        sendto(sock, sendStr.c_str(), sendStr.size(), 0, (struct sockaddr*)&clientAddr, sizeof(clientAddr));
+    }
+
 };
 
 
