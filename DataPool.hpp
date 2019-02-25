@@ -3,6 +3,7 @@
 #include <semaphore.h>
 #include <vector>
 #include <string>
+#include <iostream>
 
 class DataPool
 {

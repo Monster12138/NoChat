@@ -18,11 +18,22 @@ class Request
 {
 public:
     std::string method_;    //Register, Login, Logout
-    std::string content_lenth_; //"Conten-Length: 89"
+    std::string content_lenth_; 
     std::string blank_;
     std::string text_;
 
     Request():blank_("\n") {}
+};
+
+class Response
+{
+public:
+    std::string status_;
+    std::string content_lenth_; 
+    std::string blank_;
+    std::string text_;
+
+    Response():blank_("\n") {}
 };
 
 class Util
@@ -114,7 +125,7 @@ public:
         }
     }
 
-    static void SendReQuest(int sock, Request &rq)
+    static void SendReQuest(int sock, const Request &rq)
     {
         send(sock, rq.method_.c_str(), rq.method_.size(), 0);
         send(sock, rq.content_lenth_.c_str(), rq.content_lenth_.size(), 0);
@@ -122,6 +133,7 @@ public:
         send(sock, rq.text_.c_str(), rq.text_.size(), 0);
     }
    
+
     static void RecvRequest(int sock, Request &rq)
     {
         RecvOneLine(sock, rq.method_);
@@ -131,7 +143,7 @@ public:
         size_t pos = cl.find(": ");
         if(std::string::npos == pos )
         {
-            std::cout << "not found!" << std::endl;
+            LOG("Request msg's format error!", WARING);
             return;
         }
         std::string  lenstr = cl.substr(pos + 2);
@@ -144,6 +156,39 @@ public:
             rq.text_.push_back(c);
         }
         
+    }
+
+    static void SendResponse(int sock, const Response &rp)
+    {
+        send(sock, rp.status_.c_str(), rp.status_.size(), 0);
+        send(sock, rp.content_lenth_.c_str(), rp.content_lenth_.size(), 0);
+        send(sock, rp.blank_.c_str(), rp.blank_.size(), 0);
+        send(sock, rp.text_.c_str(), rp.text_.size(), 0);
+    }
+
+    static void RecvResponse(int sock, Response &rp)
+    {
+        RecvOneLine(sock, rp.status_);
+        RecvOneLine(sock, rp.content_lenth_);
+        RecvOneLine(sock, rp.blank_);
+        std::string &cl = rp.content_lenth_;
+
+        size_t pos = cl.find(": ");
+        if(std::string::npos == pos)
+        {
+            LOG("Response msg's format error!", WARING);
+            return;
+        }
+
+        std::string lenstr = cl.substr(pos + 2);
+        int size = StringToInt(lenstr);
+
+        char c;
+        for(auto i = 0; i < size; ++i)
+        {
+            recv(sock, &c, 1, 0);
+            rp.text_.push_back(c);
+        }
     }
 
     static void RecvMessage(int sock, std::string& recvStr, struct sockaddr_in& clientAddr)

@@ -7,20 +7,24 @@ static void Usage(std::string proc)
     std::cout << "Usage: " << proc << " tcp_port udp_port" << std::endl;
 }
 
-void *RunProducter(void *arg)
+void* RunProducter(void *arg)
 {
+    pthread_detach(pthread_self());
+    std::cout << "Producter thread run\n";
     ServerNoChat *sp = (ServerNoChat*)arg;
     for(;;)
     {
         sp->Producter();
     }
-
+    
     return sp;
 }
 
-void *RunConsume(void *arg)
+void* RunConsume(void *arg)
 {
-    ServerNoChat* sp = (ServerNoChat* )arg;
+    pthread_detach(pthread_self());
+    std::cout << "Consume thread run\n";
+    ServerNoChat* sp = (ServerNoChat*)arg;
     for(;;)
     {
         sp->Consumer();
@@ -43,10 +47,9 @@ int main(int argc, char **argv)
     ServerNoChat *sp = new ServerNoChat(tcp_port, udp_port);
     sp->InitServer();
 
-    thread product_th{RunProducter, sp};
-    product_th.detach();
-    thread consume_th{RunProducter, sp};
-    consume_th.detach();
+    pthread_t tid;
+    pthread_create(&tid, 0, RunProducter, sp);
+    pthread_create(&tid, 0, RunConsume, sp);
     sp->Start();
 
 

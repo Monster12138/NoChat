@@ -5,9 +5,9 @@ libdir=./lib
 .PHONY: all
 all:clean $(server) $(client)
 $(server):ServerNoChat.cc
-	$(cc) -o $@ $^ -pthread -L$(libdir) -ljsoncpp -static
+	$(cc) -o $@ $^ -pthread -L$(libdir) -g -ljsoncpp -static
 $(client):ClientNoChat.cc
-	$(cc) -o $@ $^ -pthread -L$(libdir) -ljsoncpp -static
+	$(cc) -o $@ $^ -pthread -L$(libdir) -g -ljsoncpp -static
 .PHONY: clean
 clean:
 	rm -rf ServerNoChat ClientNoChat

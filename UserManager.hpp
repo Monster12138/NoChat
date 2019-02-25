@@ -9,6 +9,8 @@
 class User
 {
 public:
+    User() {}
+
     User(const std::string& nick_name, const unsigned int& id, const std::string & passwd):
         nick_name_(nick_name),
         id_(id),
@@ -26,6 +28,7 @@ public:
     std::mutex lock_;
     typedef std::unordered_map<unsigned int, User> UserMap;
     typedef std::unordered_map<unsigned int, struct sockaddr_in> OnlineUser;
+
     UserManager():assign_id(60000) {}
     ~UserManager() {}
     
@@ -56,10 +59,12 @@ public:
                 lock_.unlock();
                 return id;
             }
+            else
+                return 2;
         }
 
         lock_.unlock();
-        return 2;
+        return 1;
     }
 
     void AddOnlineUser(const unsigned int id, struct sockaddr_in & clientAddr)
@@ -82,6 +87,10 @@ public:
         return online;
     }
 
+    User GetUserInfo(unsigned int id)
+    {
+        return users[id];
+    }
 private:
     UserMap users;
     OnlineUser onlineUsers;

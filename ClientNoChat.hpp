@@ -8,6 +8,10 @@
 
 const int TCP_PORT = 8666;
 const int UDP_PORT = 8777;
+
+void *RefreshMsg(void *);
+
+
 class ClientNoChat
 {
 public:
@@ -62,9 +66,17 @@ public:
 
             Util::SendReQuest(tcp_sock_, rq);
             
-            recv(tcp_sock_, &id_, sizeof(id_), 0);
-            if(id_ >= ID_TRESHOLD)
+            Response rp;
+            Util::RecvResponse(tcp_sock_, rp);
+            std::cout << rp.status_ << std::endl;
+            std::cout << rp.content_lenth_ << std::endl;
+            std::cout << rp.blank_ << std::endl;
+            std::cout << rp.text_ << std::endl;
+            if(rp.status_ == "SUCCESS")
             {
+                Json::Value rpRoot;
+                Util::UnSeralizer(rp.text_, rpRoot);
+                id_ = rpRoot["id"].asInt();
                 std::cout << "Register Success! Your Login ID Is : " << id_ << std::endl;
                 return true;
             }
@@ -96,16 +108,19 @@ public:
 
             Util::SendReQuest(tcp_sock_, rq);
             
-            unsigned int result;
-            recv(tcp_sock_, &result, sizeof(result), 0);
-            if(id_ >= ID_TRESHOLD)
+            Response rp;
+            Util::RecvResponse(tcp_sock_, rp);
+            if(rp.status_ == "SUCCESS")
             {
-                std::cout << "Login Success!" << std::endl;
+                Json::Value rpRoot;
+                Util::UnSeralizer(rp.text_, rpRoot);
+                nick_name_ = rpRoot["name"].asString();
+                std::cout << "Login Success!\n Welcome " << nick_name_ << std::endl;
                 return true;
             }
             else
             {
-                std::cout << "Login Failed! Error number : " << result << std::endl;
+                std::cout << "Login Failed : " << rp.status_ << std::endl;
                 return false;
             }
             close(tcp_sock_);
@@ -115,27 +130,22 @@ public:
 
     void Chat()
     {
-        std::string name;
-        std::cout << "Please Enter Your Name: ";
-        std::cin >> name;
+        pthread_t tid;
+        pthread_create(&tid, 0, RefreshMsg, this);
 
         for(;;)
         {
             std::string text;
-            std::cout << "Please say: ";
             std::cin >> text;
             Message msg(nick_name_, id_, text);
 
             std::string sendStr;
             msg.ToSendString(sendStr);
             Util::SendMessage(udp_sock_, sendStr, server);
-
-            std::string recvStr;
-            Util::RecvMessage(udp_sock_, recvStr, server);
-            msg.ToRecvValue(recvStr);
-            std::cout << msg.nick_name_ << ":" << msg.text_ << std::endl;
         }
     }
+
+    friend void *RefreshMsg(void *);
 private:
     std::string peer_ip_;
     int tcp_sock_;
@@ -148,4 +158,19 @@ private:
     struct sockaddr_in server;
 };
 
+void *RefreshMsg(void *arg)
+{
+    pthread_detach(pthread_self());
+    Message msg;
+    ClientNoChat *cp = (ClientNoChat*)arg;
+
+    for(;;)
+    {
+        std::string recvStr;
+        Util::RecvMessage(cp->udp_sock_, recvStr, cp->server);
+        msg.ToRecvValue(recvStr);
+        std::cout <<  msg.nick_name_ << ":" << msg.text_ << std::endl;
+    }
+    return arg;
+}
 #endif
