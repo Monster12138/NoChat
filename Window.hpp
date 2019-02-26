@@ -3,6 +3,7 @@
 #include <ncurses.h>
 #include <unistd.h>
 #include <string>
+#include <mutex>
 
 class Window
 {
@@ -10,6 +11,14 @@ public:
     Window() 
     {
         initscr();
+        curs_set(0);
+    }
+
+    void Safewrefresh(WINDOW* w)
+    {
+        locker_.lock();
+        wrefresh(w);
+        locker_.unlock();
     }
 
     void DrawHeader()
@@ -20,7 +29,7 @@ public:
         int x = 0;
         header_ = newwin(h, w, y, x);
         box(header_, 0, 0);
-        wrefresh(header_);
+        Safewrefresh(header_);
     }
 
     void DrawOutput()
@@ -31,7 +40,7 @@ public:
         int x = 0;
         output_ = newwin(h, w, y, x);
         box(output_, 0, 0);
-        wrefresh(output_);
+        Safewrefresh(output_);
     }
 
     void DrawOnline()
@@ -42,7 +51,7 @@ public:
         int x = COLS * 0.75;
         online_ = newwin(h, w, y, x);
         box(online_, 0, 0);
-        wrefresh(online_);
+        Safewrefresh(online_);
     }
 
     void DrawInput()
@@ -53,7 +62,9 @@ public:
         int x = 0;
         input_ = newwin(h, w, y, x);
         box(input_, 0, 0);
-        wrefresh(input_);
+        std::string tips = "Please Enter> ";
+        PutStrToWin(input_, 2, 2, tips);
+        Safewrefresh(input_);
     }
     
     void Draw()
@@ -64,14 +75,62 @@ public:
         DrawInput();
     }
 
-    void GetStrFronWin(WINDOW *pw, std::string& str)
+    void GetStrFromInput(std::string& str)
     {
+        char buf[1024] = {0};
+        wgetnstr(input_, buf, 1024);
+        str = buf;
+        
+        delwin(input_);
+        DrawInput();
     }
 
     void PutStrToWin(WINDOW *pw, int y, int x, const std::string& str)
     {
         mvwaddstr(pw, y, x, str.c_str());
-        wrefresh(pw);
+        Safewrefresh(pw);
+    }
+
+    void PutMesToOutput(const std::string& str)
+    {
+        static int line = 1;
+        int y = getmaxy(output_);
+        if(line > y - 3)
+        {
+            delwin(output_);
+            DrawOutput();
+            line = 1;
+        }
+
+        PutStrToWin(output_, line++, 2, str);
+    }
+
+    void Welcome()
+    {
+        std::string welcome = "welcome to NoChat!";
+        unsigned int cols = 1, y, x;
+        int dir = 0;
+        for(;;)
+        {
+            getmaxyx(header_, y, x);
+            DrawHeader();
+            if(cols > x - welcome.size() -3)
+                dir = 1;
+            if(cols < 2)
+                dir = 0;
+            PutStrToWin(header_, y/2, cols, welcome);
+            if(0 == dir)
+            {
+                ++cols;
+            }
+            else
+            {
+                --cols;
+            }
+
+            usleep(50000);
+            delwin(header_);
+        }
     }
 
     ~Window() 
@@ -83,5 +142,6 @@ public:
     WINDOW *output_;
     WINDOW *online_;
     WINDOW *input_;
+    std::mutex locker_;
 };
 

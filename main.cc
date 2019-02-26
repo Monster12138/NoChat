@@ -5,8 +5,12 @@ int main()
 {
     Window w;
     w.Draw();
-    w.PutStrToWin(w.header_, 2, 3, "hello world!"); 
-
+    for(;;)
+    {
+        std::string str;
+        w.GetStrFromInput( str);
+        w.PutMesToOutput(str);
+    }
     getchar();
     return 0;
 }

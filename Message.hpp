@@ -34,7 +34,6 @@ public:
         nick_name_ = root["name"].asString();
         id_ = root["id"].asInt();
         text_ = root["text"].asString();
-
     }
 
     std::string nick_name_;

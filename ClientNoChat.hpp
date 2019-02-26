@@ -3,14 +3,27 @@
 
 #include "ProtocolUtil.hpp"
 #include "Message.hpp"
+#include "Window.hpp"
 #include <iostream>
 #include <string>
+#include "pthread.h"
 
 const int TCP_PORT = 8666;
 const int UDP_PORT = 8777;
 
 void *RefreshMsg(void *);
+void *Welcome(void *);
+void *Output(void *);
+void *Online(void *);
+class ClientNoChat;
 
+struct cw_pair
+{
+    ClientNoChat *cp_;
+    Window *wp_;
+
+    cw_pair(ClientNoChat *cp, Window *wp):cp_(cp), wp_(wp) {} 
+};
 
 class ClientNoChat
 {
@@ -130,6 +143,26 @@ public:
 
     void Chat()
     {
+        Window w;
+        pthread_t head, output, online;
+        
+        pthread_create(&head, 0, Welcome, &w);
+        pthread_create(&output, 0, Output, &w);
+        //pthread_create(&online, 0, Online, &w);
+        
+        w.DrawInput();
+        std::string text;
+        for(;;)
+        {
+            w.GetStrFromInput(text);
+
+            std::string sendStr;
+            Message msg(nick_name_, id_, text);
+            msg.ToSendString(sendStr);
+
+            Util::SendMessage(udp_sock_, sendStr, server);        
+        }
+#if 0
         pthread_t tid;
         pthread_create(&tid, 0, RefreshMsg, this);
 
@@ -143,9 +176,11 @@ public:
             msg.ToSendString(sendStr);
             Util::SendMessage(udp_sock_, sendStr, server);
         }
+#endif
     }
 
     friend void *RefreshMsg(void *);
+    friend void *Output(void *);
 private:
     std::string peer_ip_;
     int tcp_sock_;
@@ -173,4 +208,40 @@ void *RefreshMsg(void *arg)
     }
     return arg;
 }
+
+void *Welcome(void *arg)
+{
+    pthread_detach(pthread_self());
+    Window *w = (Window *)arg;
+    w->Welcome();
+
+    return arg;
+}
+
+void *Output(void *arg)
+{
+    pthread_detach(pthread_self());
+    cw_pair *cwpptr = (cw_pair*)arg;
+    Window *wp = cwpptr->wp_;
+    ClientNoChat *cp = cwpptr->cp_;
+    
+    std::string recvStr;
+    for(;;)
+    {
+        Message msg;
+        Util::RecvMessage(cp->udp_sock_, recvStr, cp->server);
+        msg.ToRecvValue(recvStr);
+
+        std::string showStr;
+        showStr = Util::IntToString(msg.id_) + ": " + msg.text_;
+        wp->PutMesToOutput(showStr);
+    }
+}
+
+void *Online(void *arg)
+{
+    return arg;
+}
+
+
 #endif
