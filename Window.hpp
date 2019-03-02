@@ -4,6 +4,9 @@
 #include <unistd.h>
 #include <string>
 #include <mutex>
+#include <list>
+#include "BarragePool.hpp"
+
 
 class Window
 {
@@ -91,8 +94,9 @@ public:
         Safewrefresh(pw);
     }
 
-    void PutMesToOutput(const std::string& str)
+    void PutMesToOutput(std::list<Barrage>& lb)
     {
+#if 0
         static int line = 1;
         int y = getmaxy(output_);
         if(line > y - 3)
@@ -103,6 +107,19 @@ public:
         }
 
         PutStrToWin(output_, line++, 2, str);
+#else
+        int x, y;
+        getmaxyx(output_, y, x);
+        for(auto it = lb.begin(); it != lb.end(); ++it)
+        {
+            PutStrToWin(output_, (*it).cols_++, (*it).rows_%x, (*it).str_);
+            if((*it).cols_ > (int) (y - (*it).str_.size() - 2)) 
+            {
+                lb.erase(it);
+                break;
+            }
+        }
+#endif 
     }
 
     void Welcome()
@@ -144,4 +161,5 @@ public:
     WINDOW *input_;
     std::mutex locker_;
 };
+
 

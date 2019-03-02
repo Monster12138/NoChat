@@ -125,13 +125,13 @@ public:
     {
         std::string msg;
         dp.GetMessage(msg);
-        //std::cout << "get msg: " << msg << std::endl;
+        std::cout << "get msg: " << msg << std::endl;
 
         auto online = um.GetOnlineUsers();
         for(auto it = online.begin(); it != online.end(); ++it)
         {
             Util::SendMessage(udp_work_sock_, msg, it->second);
-            //std::cout << "send Msg: " << msg << std::endl;
+            std::cout << "send Msg: " << msg << std::endl;
         }
     }
 
@@ -193,10 +193,6 @@ void* HandlerRequest(void *arg)
     {
         
     }
-
-    //recv
-    //anys
-    //response
 
     close(sock);
     return NULL;

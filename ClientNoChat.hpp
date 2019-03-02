@@ -6,7 +6,9 @@
 #include "Window.hpp"
 #include <iostream>
 #include <string>
+#include <list>
 #include "pthread.h"
+#include "BarragePool.hpp"
 
 const int TCP_PORT = 8666;
 const int UDP_PORT = 8777;
@@ -145,11 +147,14 @@ public:
     {
         Window w;
         pthread_t head, output, online;
+        cw_pair p(this, &w);        
         
         pthread_create(&head, 0, Welcome, &w);
-        pthread_create(&output, 0, Output, &w);
+        pthread_create(&output, 0, Output, &p);
         //pthread_create(&online, 0, Online, &w);
         
+
+
         w.DrawInput();
         std::string text;
         for(;;)
@@ -218,13 +223,67 @@ void *Welcome(void *arg)
     return arg;
 }
 
+struct BPW_pair
+{
+    BarragePool *bpp_;
+    Window *wp_;
+
+    BPW_pair() {}
+    BPW_pair(BarragePool *bpp, Window *wp):bpp_(bpp), wp_(wp) {}
+};
+
+void *ShowOutput(void *arg)
+{
+    BPW_pair* bpw_pair = (BPW_pair*) arg;
+    Window *wp = bpw_pair->wp_;
+    BarragePool *bp = bpw_pair->bpp_;
+    
+    std::list<Barrage> vec;
+    
+    int x, y;
+    getmaxyx(wp->output_, y, x);
+
+    wp->DrawOutput();
+    for(;;)
+    {
+        while(!bp->Empty())
+        {
+            Barrage tmp;
+            bp->GetBarrage(tmp);
+            vec.push_front(tmp);
+        }
+
+        wp->DrawOutput();
+        for(auto it = vec.begin(); it != vec.end(); ++it)
+        {
+            wp->PutStrToWin(wp->output_, (*it).rows_%y, (*it).cols_++, (*it).str_);
+            if((*it).cols_ > (int)(x - (*it).str_.size() - 2))
+            {
+                vec.erase(it);
+                break;
+            }
+        }
+        delwin(wp->output_);
+
+        usleep(80000);
+    }
+
+    return arg;
+}
+
 void *Output(void *arg)
 {
     pthread_detach(pthread_self());
     cw_pair *cwpptr = (cw_pair*)arg;
     Window *wp = cwpptr->wp_;
     ClientNoChat *cp = cwpptr->cp_;
-    
+
+    static int rows = 1;
+    BarragePool barragePool;
+    BPW_pair bpw_pair(&barragePool, wp);
+    pthread_t tid;
+    pthread_create(&tid, 0, ShowOutput, (void*)&bpw_pair);
+
     std::string recvStr;
     for(;;)
     {
@@ -233,10 +292,12 @@ void *Output(void *arg)
         msg.ToRecvValue(recvStr);
 
         std::string showStr;
-        showStr = Util::IntToString(msg.id_) + ": " + msg.text_;
-        wp->PutMesToOutput(showStr);
+        showStr = msg.nick_name_ + ": " + msg.text_;
+        
+        barragePool.PutBarrage(Barrage(showStr, rows++));
     }
 }
+
 
 void *Online(void *arg)
 {
