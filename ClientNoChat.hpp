@@ -7,6 +7,7 @@
 #include <iostream>
 #include <string>
 #include <list>
+#include <fstream>
 #include "pthread.h"
 #include "BarragePool.hpp"
 
@@ -198,22 +199,6 @@ private:
     struct sockaddr_in server;
 };
 
-void *RefreshMsg(void *arg)
-{
-    pthread_detach(pthread_self());
-    Message msg;
-    ClientNoChat *cp = (ClientNoChat*)arg;
-
-    for(;;)
-    {
-        std::string recvStr;
-        Util::RecvMessage(cp->udp_sock_, recvStr, cp->server);
-        msg.ToRecvValue(recvStr);
-        std::cout <<  msg.nick_name_ << ":" << msg.text_ << std::endl;
-    }
-    return arg;
-}
-
 void *Welcome(void *arg)
 {
     pthread_detach(pthread_self());
@@ -240,10 +225,16 @@ void *ShowOutput(void *arg)
     
     std::list<Barrage> vec;
     
+    wp->DrawOutput();
     int x, y;
     getmaxyx(wp->output_, y, x);
+    delwin(wp->output_);
 
-    wp->DrawOutput();
+    std::ofstream fout("log.txt", std::ios::out);
+    if(!fout.is_open())
+    {
+        exit(3);
+    }
     for(;;)
     {
         while(!bp->Empty())
@@ -256,7 +247,7 @@ void *ShowOutput(void *arg)
         wp->DrawOutput();
         for(auto it = vec.begin(); it != vec.end(); ++it)
         {
-            wp->PutStrToWin(wp->output_, (*it).rows_%y, (*it).cols_++, (*it).str_);
+            wp->PutStrToWin(wp->output_, (*it).rows_%(y - 2) + 1, (*it).cols_++, (*it).str_);
             if((*it).cols_ > (int)(x - (*it).str_.size() - 2))
             {
                 vec.erase(it);
@@ -278,7 +269,7 @@ void *Output(void *arg)
     Window *wp = cwpptr->wp_;
     ClientNoChat *cp = cwpptr->cp_;
 
-    static int rows = 1;
+    static int rows = 0;
     BarragePool barragePool;
     BPW_pair bpw_pair(&barragePool, wp);
     pthread_t tid;
