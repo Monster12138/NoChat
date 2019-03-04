@@ -94,34 +94,6 @@ public:
         Safewrefresh(pw);
     }
 
-    void PutMesToOutput(std::list<Barrage>& lb)
-    {
-#if 0
-        static int line = 1;
-        int y = getmaxy(output_);
-        if(line > y - 3)
-        {
-            delwin(output_);
-            DrawOutput();
-            line = 1;
-        }
-
-        PutStrToWin(output_, line++, 2, str);
-#else
-        int x, y;
-        getmaxyx(output_, y, x);
-        for(auto it = lb.begin(); it != lb.end(); ++it)
-        {
-            PutStrToWin(output_, (*it).cols_++, (*it).rows_%x, (*it).str_);
-            if((*it).cols_ > (int) (y - (*it).str_.size() - 2)) 
-            {
-                lb.erase(it);
-                break;
-            }
-        }
-#endif 
-    }
-
     void Welcome()
     {
         std::string welcome = "welcome to NoChat!";

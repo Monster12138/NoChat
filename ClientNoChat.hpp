@@ -147,6 +147,7 @@ public:
     void Chat()
     {
         Window w;
+        setlocale(LC_ALL,"");
         pthread_t head, output, online;
         cw_pair p(this, &w);        
         
@@ -161,28 +162,14 @@ public:
         for(;;)
         {
             w.GetStrFromInput(text);
-
+            if(text == "")continue;
             std::string sendStr;
             Message msg(nick_name_, id_, text);
             msg.ToSendString(sendStr);
 
             Util::SendMessage(udp_sock_, sendStr, server);        
         }
-#if 0
-        pthread_t tid;
-        pthread_create(&tid, 0, RefreshMsg, this);
 
-        for(;;)
-        {
-            std::string text;
-            std::cin >> text;
-            Message msg(nick_name_, id_, text);
-
-            std::string sendStr;
-            msg.ToSendString(sendStr);
-            Util::SendMessage(udp_sock_, sendStr, server);
-        }
-#endif
     }
 
     friend void *RefreshMsg(void *);
