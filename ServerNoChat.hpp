@@ -148,6 +148,28 @@ private:
     DataPool dp;
 };
 
+void SendOnlineUsers(int sock, UserManager &um)
+{
+    auto onlineUsers = um.GetOnlineUsers();
+    int num = onlineUsers.size();
+    send(sock, &num, sizeof(int), 0);
+
+    for(auto it = onlineUsers.begin(); it != onlineUsers.end(); ++it)
+    {
+        Json::Value root;
+        root["id"] = (*it).first;
+        root["name"] = um.GetUserInfo((*it).first).nick_name_;
+
+        std::string sendStr;
+        Util::Seralizer(root, sendStr);
+     
+        int len = sendStr.size();
+        send(sock, &len, sizeof(int), 0);
+        send(sock, sendStr.c_str(), sendStr.size(), 0);
+        std::cout << "send onlneuser: " << sendStr << std::endl;
+    }
+}
+
 void* HandlerRequest(void *arg)
 {
     parm* pparm = (parm*)arg;
@@ -189,6 +211,11 @@ void* HandlerRequest(void *arg)
         Response rp = sp->LoginUser(id, passwd);
         
         Util::SendResponse(sock, rp);
+
+        if(rp.status_ == "SUCCESS")
+        {
+            SendOnlineUsers(sock, sp->um);
+        }
     }
     else
     {

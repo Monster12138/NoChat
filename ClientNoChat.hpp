@@ -8,8 +8,10 @@
 #include <string>
 #include <list>
 #include <fstream>
+#include <unordered_map>
 #include "pthread.h"
 #include "BarragePool.hpp"
+#include "UserManager.hpp"
 
 const int TCP_PORT = 8666;
 const int UDP_PORT = 8777;
@@ -17,7 +19,6 @@ const int UDP_PORT = 8777;
 void *RefreshMsg(void *);
 void *Welcome(void *);
 void *Output(void *);
-void *Online(void *);
 class ClientNoChat;
 
 struct cw_pair
@@ -34,8 +35,7 @@ public:
     ClientNoChat(const std::string ip):
         peer_ip_(ip), 
         tcp_sock_(-1), 
-        udp_sock_(-1), 
-        id_(0)
+        udp_sock_(-1)
     {
         server.sin_family = AF_INET;
         server.sin_port = htons(UDP_PORT);
@@ -66,14 +66,14 @@ public:
 
     bool Register()
     {
-        if(Util::RegisterEnter(nick_name_, passwd_) && ConnectServer())
+        if(Util::RegisterEnter(local_user_.nick_name_, local_user_.passwd_) && ConnectServer())
         {
             Request rq;
             rq.method_ = "REGISTER\n";
 
             Json::Value root;
-            root["name"] = nick_name_;
-            root["passwd"] = passwd_;
+            root["name"] = local_user_.nick_name_;
+            root["passwd"] = local_user_.passwd_;
             
             Util::Seralizer(root, rq.text_);
             rq.content_lenth_ = "Content-Length: ";
@@ -92,13 +92,13 @@ public:
             {
                 Json::Value rpRoot;
                 Util::UnSeralizer(rp.text_, rpRoot);
-                id_ = rpRoot["id"].asInt();
-                std::cout << "Register Success! Your Login ID Is : " << id_ << std::endl;
+                local_user_.id_ = rpRoot["id"].asInt();
+                std::cout << "Register Success! Your Login ID Is : " << local_user_.id_ << std::endl;
                 return true;
             }
             else
             {
-                std::cout << "Register Failed! Error number : " << id_ << std::endl;
+                std::cout << "Register Failed! Error number : " << local_user_.id_ << std::endl;
                 return false;
             }
             close(tcp_sock_);
@@ -106,16 +106,42 @@ public:
         return false;
     }
 
+    void GetOnlineUsers()
+    {
+        int i = 0, num;
+        recv(tcp_sock_, &num, sizeof(int), 0);
+
+        while(i++ < num)
+        {
+            int len;
+            char buf[1024] = {0};
+            std::string recvStr;
+            recv(tcp_sock_, &len, sizeof(int), 0);
+            recv(tcp_sock_, buf, len, 0);
+            
+            recvStr.assign(buf);
+            Json::Value root;
+            Util::UnSeralizer(recvStr, root);
+
+            int id;
+            std::string name;
+            id = root["id"].asInt();
+            name = root["name"].asString();
+
+            onlineUsers_.push_back(User(name, id));
+        }
+    }
+
     bool Login()
     {
-        if(Util::LoginEnter(id_, passwd_) && ConnectServer())
+        if(Util::LoginEnter(local_user_.id_, local_user_.passwd_) && ConnectServer())
         {
             Request rq;
             rq.method_ = "LOGIN\n";
 
             Json::Value root;
-            root["id"] = id_;
-            root["passwd"] = passwd_;
+            root["id"] = local_user_.id_;
+            root["passwd"] = local_user_.passwd_;
             
             Util::Seralizer(root, rq.text_);
             rq.content_lenth_ = "Content-Length: ";
@@ -130,8 +156,9 @@ public:
             {
                 Json::Value rpRoot;
                 Util::UnSeralizer(rp.text_, rpRoot);
-                nick_name_ = rpRoot["name"].asString();
-                std::cout << "Login Success!\n Welcome " << nick_name_ << std::endl;
+                local_user_.nick_name_ = rpRoot["name"].asString();
+                std::cout << "Login Success!\n Welcome " << local_user_.nick_name_ << std::endl;
+                GetOnlineUsers();
                 return true;
             }
             else
@@ -148,7 +175,7 @@ public:
     {
         Window w;
         setlocale(LC_ALL,"");
-        pthread_t head, output, online;
+        pthread_t head, output;
         cw_pair p(this, &w);        
         
         pthread_create(&head, 0, Welcome, &w);
@@ -164,7 +191,7 @@ public:
             w.GetStrFromInput(text);
             if(text == "")continue;
             std::string sendStr;
-            Message msg("CHAT" ,nick_name_, id_, text);
+            Message msg("CHAT" ,local_user_.nick_name_, local_user_.id_, text);
             msg.ToSendString(sendStr);
 
             Util::SendMessage(udp_sock_, sendStr, server);        
@@ -175,20 +202,21 @@ public:
     friend void *RefreshMsg(void *);
     friend void *Output(void *);
 private:
+    typedef std::list<User> OnlineUsers;
     std::string peer_ip_;
     int tcp_sock_;
     int udp_sock_;
 
-    unsigned int id_;
-    std::string passwd_;
-    std::string nick_name_;
+    User local_user_;
+    OnlineUsers onlineUsers_;
 
     struct sockaddr_in server;
+
 
     void SendOnlineMes()
     {
         std::string sendStr;
-        Message msg("ONLINE" ,nick_name_, id_, "");
+        Message msg("ONLINE" ,local_user_.nick_name_, local_user_.id_, "");
         msg.ToSendString(sendStr);
 
         Util::SendMessage(udp_sock_, sendStr, server);
@@ -272,6 +300,7 @@ void *Output(void *arg)
     pthread_create(&tid, 0, ShowOutput, (void*)&bpw_pair);
 
     std::string recvStr;
+    
     for(;;)
     {
         Message msg;
@@ -286,9 +315,9 @@ void *Output(void *arg)
 }
 
 
-void *Online(void *arg)
+void ShowOnline()
 {
-    return arg;
+    //todo        
 }
 
 

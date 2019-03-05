@@ -11,6 +11,12 @@ class User
 public:
     User() {}
 
+    User(const std::string& nick_name, const unsigned int& id):
+        nick_name_(nick_name),
+        id_(id),
+        passwd_("")
+    {}
+
     User(const std::string& nick_name, const unsigned int& id, const std::string & passwd):
         nick_name_(nick_name),
         id_(id),
