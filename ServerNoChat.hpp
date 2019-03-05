@@ -116,7 +116,8 @@ public:
             Message m;
             m.ToRecvValue(recvStr);
             //std::cout << "recv Msg: " << recvStr << std::endl;
-            um.AddOnlineUser(m.id_, clientAddr);
+            if(m.type_ == "ONLINE")
+                um.AddOnlineUser(m.id_, clientAddr);
             dp.PutMessage(recvStr);        
         }
     }

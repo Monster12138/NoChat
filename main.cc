@@ -9,7 +9,6 @@ int main()
     {
         std::string str;
         w.GetStrFromInput( str);
-        w.PutMesToOutput(str);
     }
     getchar();
     return 0;

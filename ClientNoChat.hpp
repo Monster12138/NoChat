@@ -155,7 +155,7 @@ public:
         pthread_create(&output, 0, Output, &p);
         //pthread_create(&online, 0, Online, &w);
         
-
+        SendOnlineMes();
 
         w.DrawInput();
         std::string text;
@@ -164,7 +164,7 @@ public:
             w.GetStrFromInput(text);
             if(text == "")continue;
             std::string sendStr;
-            Message msg(nick_name_, id_, text);
+            Message msg("CHAT" ,nick_name_, id_, text);
             msg.ToSendString(sendStr);
 
             Util::SendMessage(udp_sock_, sendStr, server);        
@@ -184,6 +184,15 @@ private:
     std::string nick_name_;
 
     struct sockaddr_in server;
+
+    void SendOnlineMes()
+    {
+        std::string sendStr;
+        Message msg("ONLINE" ,nick_name_, id_, "");
+        msg.ToSendString(sendStr);
+
+        Util::SendMessage(udp_sock_, sendStr, server);
+    }
 };
 
 void *Welcome(void *arg)
