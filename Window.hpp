@@ -19,9 +19,16 @@ public:
 
     void Safewrefresh(WINDOW* w)
     {
-        locker_.lock();
+        wrefresh_locker_.lock();
         wrefresh(w);
-        locker_.unlock();
+        wrefresh_locker_.unlock();
+    }
+
+    void Safedelwin(WINDOW *w)
+    {
+        Safedelwin_locker_.lock();
+        delwin(w);
+        Safedelwin_locker_.unlock();
     }
 
     void DrawHeader()
@@ -84,7 +91,7 @@ public:
         wgetnstr(input_, buf, 1024);
         str = buf;
         
-        delwin(input_);
+        Safedelwin(input_);
         DrawInput();
     }
 
@@ -99,9 +106,12 @@ public:
         std::string welcome = "welcome to NoChat!";
         unsigned int cols = 1, y, x;
         int dir = 0;
+
+        DrawHeader();
+        getmaxyx(header_, y, x);
+        Safedelwin(header_);
         for(;;)
         {
-            getmaxyx(header_, y, x);
             DrawHeader();
             if(cols > x - welcome.size() -3)
                 dir = 1;
@@ -118,8 +128,15 @@ public:
             }
 
             usleep(50000);
-            delwin(header_);
+            Safedelwin(header_);
         }
+    }
+
+    void PutStrToOnline(const std::string &str, int rows)
+    {
+        int y, x, cols = 2;
+        getmaxyx(online_, y, x);
+        PutStrToWin(online_, rows%(y - 2) + 2, cols, str);
     }
 
     ~Window() 
@@ -131,7 +148,9 @@ public:
     WINDOW *output_;
     WINDOW *online_;
     WINDOW *input_;
-    std::mutex locker_;
+    std::mutex wrefresh_locker_;
+    std::mutex Safedelwin_locker_;
+
 };
 
 

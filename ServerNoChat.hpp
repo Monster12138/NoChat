@@ -5,6 +5,7 @@
 #include "ProtocolUtil.hpp"
 #include "DataPool.hpp"
 #include "Message.hpp"
+#include "Log.hpp"
 #include <pthread.h>
 
 void* HandlerRequest(void *arg);
@@ -117,7 +118,10 @@ public:
             m.ToRecvValue(recvStr);
             //std::cout << "recv Msg: " << recvStr << std::endl;
             if(m.type_ == "ONLINE")
+            {
                 um.AddOnlineUser(m.id_, clientAddr);
+                //LOG(inet_ntoa(clientAddr.sin_addr) + Util::IntToString(clientAddr.sin_port), NORMAL);
+            }
             dp.PutMessage(recvStr);        
         }
     }
@@ -153,6 +157,8 @@ void SendOnlineUsers(int sock, UserManager &um)
     auto onlineUsers = um.GetOnlineUsers();
     int num = onlineUsers.size();
     send(sock, &num, sizeof(int), 0);
+    
+    //LOG("online number: " + Util::IntToString(num), NORMAL);
 
     for(auto it = onlineUsers.begin(); it != onlineUsers.end(); ++it)
     {
@@ -212,7 +218,7 @@ void* HandlerRequest(void *arg)
         
         Util::SendResponse(sock, rp);
 
-        if(rp.status_ == "SUCCESS")
+        if(rp.status_ == "SUCCESS\n")
         {
             SendOnlineUsers(sock, sp->um);
         }

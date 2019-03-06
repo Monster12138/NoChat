@@ -199,10 +199,10 @@ public:
 
     }
 
+    typedef std::list<User> OnlineUsers;
     friend void *RefreshMsg(void *);
     friend void *Output(void *);
 private:
-    typedef std::list<User> OnlineUsers;
     std::string peer_ip_;
     int tcp_sock_;
     int udp_sock_;
@@ -241,6 +241,26 @@ struct BPW_pair
     BPW_pair(BarragePool *bpp, Window *wp):bpp_(bpp), wp_(wp) {}
 };
 
+void ShowOnline(Window *wp, ClientNoChat::OnlineUsers &online)
+{
+    std::string userStr;
+    wp->DrawOnline();
+
+    int cows = 2;
+    for(auto it = online.begin(); it != online.end(); ++it)
+    {
+        userStr.clear();
+        while((*it).nick_name_.size() < 10)
+        {
+            (*it).nick_name_.push_back(' ');
+        }
+        userStr += (*it).nick_name_ + " | " + Util::IntToString((*it).id_);
+        wp->PutStrToOnline(userStr, cows++);
+    }
+    wp->Safedelwin(wp->online_);
+}
+
+
 void *ShowOutput(void *arg)
 {
     BPW_pair* bpw_pair = (BPW_pair*) arg;
@@ -252,14 +272,9 @@ void *ShowOutput(void *arg)
     wp->DrawOutput();
     int x, y;
     getmaxyx(wp->output_, y, x);
-    delwin(wp->output_);
+    wp->Safedelwin(wp->output_);
 
-    std::ofstream fout("log.txt", std::ios::out);
-    if(!fout.is_open())
-    {
-        exit(3);
-    }
-    for(;;)
+   for(;;)
     {
         while(!bp->Empty())
         {
@@ -278,7 +293,7 @@ void *ShowOutput(void *arg)
                 break;
             }
         }
-        delwin(wp->output_);
+        wp->Safedelwin(wp->output_);
 
         usleep(80000);
     }
@@ -293,6 +308,13 @@ void *Output(void *arg)
     Window *wp = cwpptr->wp_;
     ClientNoChat *cp = cwpptr->cp_;
 
+    ShowOnline(wp, cp->onlineUsers_);
+    std::ofstream fout("log.txt", std::ios::out);
+    if(!fout.is_open())
+    {
+        exit(3);
+    }
+  
     static int rows = 0;
     BarragePool barragePool;
     BPW_pair bpw_pair(&barragePool, wp);
@@ -306,19 +328,27 @@ void *Output(void *arg)
         Message msg;
         Util::RecvMessage(cp->udp_sock_, recvStr, cp->server);
         msg.ToRecvValue(recvStr);
+        fout << recvStr << std::endl;
+        
+        if(msg.type_ == "ONLINE")
+        {
+            cp->onlineUsers_.push_back(User(msg.nick_name_, msg.id_));
+            fout << msg.nick_name_ << " login!\n";
+            ShowOnline(wp, cp->onlineUsers_);
+            continue;
+        }
 
         std::string showStr;
         showStr = msg.nick_name_ + ": " + msg.text_;
+        fout << showStr << std::endl;;
         
         barragePool.PutBarrage(Barrage(showStr, rows++));
     }
+
+    return arg;
 }
 
 
-void ShowOnline()
-{
-    //todo        
-}
 
 
 #endif

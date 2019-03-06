@@ -1,0 +1,70 @@
+{
+	"id" : 60000,
+	"name" : "guolei",
+	"text" : "",
+	"type" : "ONLINE"
+}
+guolei login!
+{
+	"id" : 60000,
+	"name" : "guolei",
+	"text" : "hello",
+	"type" : "CHAT"
+}
+guolei: hello
+{
+	"id" : 60000,
+	"name" : "guolei",
+	"text" : "gansha",
+	"type" : "CHAT"
+}
+guolei: gansha
+{
+	"id" : 60000,
+	"name" : "guolei",
+	"text" : "??????????",
+	"type" : "CHAT"
+}
+guolei: ??????????
+{
+	"id" : 60000,
+	"name" : "guolei",
+	"text" : "chuizi",
+	"type" : "CHAT"
+}
+guolei: chuizi
+{
+	"id" : 60000,
+	"name" : "guolei",
+	"text" : "laji",
+	"type" : "CHAT"
+}
+guolei: laji
+{
+	"id" : 60000,
+	"name" : "guolei",
+	"text" : "zaiganqiu",
+	"type" : "CHAT"
+}
+guolei: zaiganqiu
+{
+	"id" : 60000,
+	"name" : "guolei",
+	"text" : "sdaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaddddd",
+	"type" : "CHAT"
+}
+guolei: sdaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaddddd
+{
+	"id" : 60000,
+	"name" : "guolei",
+	"text" : "ddddddddddddddddddddddddddddddddddddddddddd",
+	"type" : "CHAT"
+}
+guolei: ddddddddddddddddddddddddddddddddddddddddddd
+{
+	"id" : 60000,
+	"name" : "guolei",
+	"text" : "fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffsssssss",
+	"type" : "CHAT"
+}
+guolei: fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffsssssss
